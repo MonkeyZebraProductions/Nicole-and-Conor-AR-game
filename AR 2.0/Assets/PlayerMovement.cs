@@ -15,11 +15,12 @@ public class PlayerMovement : MonoBehaviour
     private CharacterController characterController;
     private float _jumpMultiplyer = 1;
     private float _jumps,_jumpAduster,_wallJumpAdjuster;
+    private GameObject _currentRail=null;
+    private RaycastHit hit;
 
-
-    public LayerMask whatIsWall;
+    public LayerMask whatIsWall,whatIsRail;
     public float wallrunForce, maxWallrunTime, maxWallSpeed;
-    bool isWallRight, isWallLeft;
+    bool isWallRight, isWallLeft,isRailGrinding;
     bool isWallRunning;
     public float maxWallRunCameraTilt, wallRunCameraTilt;
 
@@ -68,6 +69,11 @@ public class PlayerMovement : MonoBehaviour
             StartWallrun();
             
         }
+        CheckForRail();
+        if (isRailGrinding)
+        {
+            StartRailGrinding();
+        }
         if (_isJumping == true)
         {
             characterController.Move(new Vector3(JumpSpeed * _jumpMultiplyer * _wallJumpAdjuster * Time.deltaTime, JumpSpeed * _jumpMultiplyer * Time.deltaTime, 0f));
@@ -110,6 +116,7 @@ public class PlayerMovement : MonoBehaviour
     {
         _jumpAduster = 0.5f;
     }
+
     private void StartWallrun()
     {
         
@@ -122,17 +129,24 @@ public class PlayerMovement : MonoBehaviour
             characterController.Move(transform.forward * Time.deltaTime* maxWallSpeed);
 
             //Make sure char sticks to wall
-            //if (isWallRight)
-            //    rb.AddForce(orientation.right * wallrunForce / 5 * Time.deltaTime);
-            //else
-            //    rb.AddForce(-orientation.right * wallrunForce / 5 * Time.deltaTime);
+            if (isWallRight)
+            {
+                characterController.Move(transform.right * Time.deltaTime * maxWallSpeed);
+            }
+            else
+            {
+                characterController.Move(-transform.right * Time.deltaTime * maxWallSpeed);
+            }
+             
         }
     }
+
     private void StopWallRun()
     {
         isWallRunning = false;
         Gravity = 5.0f;
     }
+
     private void CheckForWall() //make sure to call in void Update
     {
         isWallRight = Physics.Raycast(transform.position, characterController.transform.right, 1f, whatIsWall);
@@ -151,6 +165,44 @@ public class PlayerMovement : MonoBehaviour
             _jumps = 1;
         }
         
+    }
+
+    private void CheckForRail()
+    {
+        isRailGrinding = Physics.Raycast(transform.position, -characterController.transform.up, out hit, 2f, whatIsRail);
+        Debug.Log(isRailGrinding);
+        Debug.DrawRay(transform.position, -characterController.transform.up*2f,Color.green);
+        if (!isRailGrinding)
+        {
+            
+        }
+            //reset double jump (if you have one :D)
+            if (isRailGrinding)
+        {
+            _currentRail = hit.collider.gameObject;
+            characterController.transform.rotation = _currentRail.transform.rotation;
+            _jumps = 1;
+        }
+    }
+    private void StartRailGrinding()
+    {
+        
+            characterController.Move(transform.forward * Time.deltaTime * maxWallSpeed);
+        if(move.x>0.0f)
+        {
+            characterController.Move(-transform.right * Time.deltaTime * maxWallSpeed);
+        }
+        else if(move.x<0.0f)
+        {
+            characterController.Move(transform.right * Time.deltaTime * maxWallSpeed);
+        }
+            
+        
+    }
+    private void StopRailGrinding()
+    {
+        
+        Gravity = 5.0f;
     }
     private void OnEnable()
     {
