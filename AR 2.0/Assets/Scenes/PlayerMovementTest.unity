@@ -647,6 +647,10 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 5817765940155536784, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6733808323271398764, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -694,6 +698,18 @@ PrefabInstance:
     - target: {fileID: 6733808323271398765, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
       propertyPath: m_Name
       value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 6733808323271398766, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
+      propertyPath: CheckDistance
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6733808323271398766, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
+      propertyPath: Gravity
+      value: 1000
+      objectReference: {fileID: 0}
+    - target: {fileID: 7972076969183368697, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
+      propertyPath: m_Enabled
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}

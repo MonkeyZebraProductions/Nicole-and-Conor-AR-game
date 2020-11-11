@@ -9,14 +9,15 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] public float MovementSpeed = 5f;
     [SerializeField] public float JumpSpeed = 5f;
     [SerializeField] public float Gravity = 5f;
+    [SerializeField] public float CheckDistance = 1f;
     public bool IsVuforia;
    
 
     private Vector2 move;
-    private bool _isWalled, _isJumping, _isDashing,isGrounded;
+    private bool _isWalled, _isJumping, _isDashing,isGrounded,_hasDoneEntrence;
     private CharacterController characterController;
     private float _jumpMultiplyer = 1;
-    private float _jumps,_jumpAduster,_wallJumpAdjuster;
+    private float _jumps,_jumpAduster,_wallJumpAdjuster,_gravity;
     private GameObject _currentRail=null;
     private RaycastHit hit;
 
@@ -34,11 +35,16 @@ public class PlayerMovement : MonoBehaviour
         controls.Gameplay.Jump.started += context => Jump();
         controls.Gameplay.Jump.canceled += context => JumpCancel();
         
+        
     }
+    
+    
 
+   
     // Start is called before the first frame update
     void Start()
     {
+        
         _jumps = 1;
     }
 
@@ -62,7 +68,7 @@ public class PlayerMovement : MonoBehaviour
             }
             else
             {
-                transform.position-= new Vector3(0f, Gravity * Time.deltaTime * Time.deltaTime, 0f);
+                transform.position-= new Vector3(0f, _gravity * Time.deltaTime * Time.deltaTime, 0f);
             }
 
             if (_isJumping == true)
@@ -76,6 +82,11 @@ public class PlayerMovement : MonoBehaviour
                     _isJumping = false;
                 }
             }
+            if ((isWallRight || isWallLeft) && isGrounded == false)
+            {
+                StartWallrun();
+
+            }
         }
         else
         {
@@ -83,7 +94,7 @@ public class PlayerMovement : MonoBehaviour
 
             if (characterController.isGrounded == false)
             {
-                characterController.Move(new Vector3(0f, Gravity * -1 * Time.deltaTime * Time.deltaTime, 0f));
+                characterController.Move(new Vector3(0f, _gravity * -1 * Time.deltaTime * Time.deltaTime, 0f));
 
             }
             if (characterController.isGrounded == true)
@@ -157,35 +168,62 @@ public class PlayerMovement : MonoBehaviour
         isWallRunning = true;
         //allowDashForceCounter = false;
         //_isJumping = true;
-        Gravity = 0.0f;
-        if (characterController.velocity.magnitude <= maxWallSpeed)
+        _gravity = 0.0f;
+        if(IsVuforia)
         {
-            characterController.Move(transform.forward * Time.deltaTime* maxWallSpeed);
+            transform.position+=transform.forward * Time.deltaTime * maxWallSpeed;
 
             //Make sure char sticks to wall
-            if (isWallRight)
+            if (move.x < 0.0f)
             {
-                characterController.Move(transform.right * Time.deltaTime * maxWallSpeed);
+                transform.position += transform.right * Time.deltaTime * maxWallSpeed;
             }
-            else
+            else if(move.x > 0.0f)
             {
-                characterController.Move(-transform.right * Time.deltaTime * maxWallSpeed);
+                transform.position += -transform.right * Time.deltaTime * maxWallSpeed;
             }
-             
         }
+        else
+        {
+            if (characterController.velocity.magnitude <= maxWallSpeed)
+            {
+                characterController.Move(transform.forward * Time.deltaTime * maxWallSpeed);
+
+                //Make sure char sticks to wall
+                if (isWallRight)
+                {
+                    characterController.Move(transform.right * Time.deltaTime * maxWallSpeed);
+                }
+                else
+                {
+                    characterController.Move(-transform.right * Time.deltaTime * maxWallSpeed);
+                }
+
+            }
+        }
+        
     }
 
     private void StopWallRun()
     {
         isWallRunning = false;
-        Gravity = 1000f;
+        if (IsVuforia)
+        {
+            _gravity = Gravity;
+        }
+        else
+        {
+            _gravity = 1000f;
+        }
     }
 
     private void CheckForWall() //make sure to call in void Update
     {
-        isWallRight = Physics.Raycast(transform.position, characterController.transform.right, 1f, whatIsWall);
-        isWallLeft = Physics.Raycast(transform.position, -characterController.transform.right, 1f, whatIsWall);
-
+        
+        isWallRight = Physics.Raycast(transform.position, transform.right, CheckDistance, whatIsWall);
+        isWallLeft = Physics.Raycast(transform.position, -transform.right, CheckDistance, whatIsWall);
+        Debug.DrawRay(transform.position, transform.right* CheckDistance, Color.yellow);
+        Debug.DrawRay(transform.position, -transform.right * CheckDistance, Color.red);
         //leave wall run
         if (!isWallLeft && !isWallRight)
         {
@@ -203,32 +241,47 @@ public class PlayerMovement : MonoBehaviour
 
     private void CheckForRail()
     {
-        isRailGrinding = Physics.Raycast(transform.position, -characterController.transform.up, out hit, 2f, whatIsRail);
+        isRailGrinding = Physics.Raycast(transform.position, -transform.up, out hit,CheckDistance*2f, whatIsRail);
         Debug.Log(isRailGrinding);
-        Debug.DrawRay(transform.position, -characterController.transform.up*2f,Color.green);
+        Debug.DrawRay(transform.position, -transform.up* CheckDistance * 2f,Color.green);
         if (!isRailGrinding)
         {
             
         }
             //reset double jump (if you have one :D)
-            if (isRailGrinding)
+        if (isRailGrinding)
         {
-            _currentRail = hit.collider.gameObject;
-            characterController.transform.rotation = _currentRail.transform.rotation;
-            _jumps = 1;
+          _currentRail = hit.collider.gameObject;
+            
+          transform.rotation = _currentRail.transform.rotation;
+          _jumps = 1;
         }
     }
     private void StartRailGrinding()
     {
-        
-            characterController.Move(transform.forward * Time.deltaTime * maxWallSpeed);
-        if(move.x>0.0f)
+        if(IsVuforia)
         {
-            characterController.Move(-transform.right * Time.deltaTime * maxWallSpeed);
+            transform.position += transform.forward * Time.deltaTime * maxWallSpeed;
+            if (move.x > 0.0f)
+            {
+                transform.position += -transform.right * Time.deltaTime * maxWallSpeed;
+            }
+            else if (move.x < 0.0f)
+            {
+                transform.position += transform.right * Time.deltaTime * maxWallSpeed;
+            }
         }
-        else if(move.x<0.0f)
+        else
         {
-            characterController.Move(transform.right * Time.deltaTime * maxWallSpeed);
+            characterController.Move(transform.forward * Time.deltaTime * maxWallSpeed);
+            if (move.x > 0.0f)
+            {
+                characterController.Move(-transform.right * Time.deltaTime * maxWallSpeed);
+            }
+            else if (move.x < 0.0f)
+            {
+                characterController.Move(transform.right * Time.deltaTime * maxWallSpeed);
+            }
         }
             
         
@@ -244,6 +297,7 @@ public class PlayerMovement : MonoBehaviour
         if(other.gameObject.layer==10)
         {
             isGrounded = true;
+            _hasDoneEntrence=true;
         }
     }
     private void OnTriggerExit(Collider other)
