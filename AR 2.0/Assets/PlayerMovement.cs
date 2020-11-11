@@ -9,9 +9,11 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] public float MovementSpeed = 5f;
     [SerializeField] public float JumpSpeed = 5f;
     [SerializeField] public float Gravity = 5f;
+    public bool IsVuforia;
+   
 
     private Vector2 move;
-    private bool _isWalled, _isJumping, _isDashing;
+    private bool _isWalled, _isJumping, _isDashing,isGrounded;
     private CharacterController characterController;
     private float _jumpMultiplyer = 1;
     private float _jumps,_jumpAduster,_wallJumpAdjuster;
@@ -31,6 +33,7 @@ public class PlayerMovement : MonoBehaviour
         characterController = GetComponent<CharacterController>();
         controls.Gameplay.Jump.started += context => Jump();
         controls.Gameplay.Jump.canceled += context => JumpCancel();
+        
     }
 
     // Start is called before the first frame update
@@ -50,41 +53,72 @@ public class PlayerMovement : MonoBehaviour
         move = controls.Gameplay.Move.ReadValue<Vector2>();
 
         Vector3 movement = (move.y * transform.forward) + (move.x * transform.right);
-        characterController.Move(movement * MovementSpeed * Time.deltaTime);
-
-        if (characterController.isGrounded == false)
+        if(IsVuforia)
         {
-            characterController.Move(new Vector3(0f, Gravity * -1 * Time.deltaTime, 0f));
-           
-        }
-        if (characterController.isGrounded == true)
-        {
-            
-            _jumps = 1;
+            transform.position += movement * MovementSpeed * Time.deltaTime;
+            if(isGrounded)
+            {
+                _jumps = 1;
+            }
+            else
+            {
+                transform.position-= new Vector3(0f, Gravity * Time.deltaTime * Time.deltaTime, 0f);
+            }
 
+            if (_isJumping == true)
+            {
+               transform.position+=new Vector3(JumpSpeed * _jumpMultiplyer * _wallJumpAdjuster * Time.deltaTime, JumpSpeed * _jumpMultiplyer * Time.deltaTime, 0f);
+
+
+                _jumpMultiplyer *= _jumpAduster;
+                if (_jumpMultiplyer <= 0.1f)
+                {
+                    _isJumping = false;
+                }
+            }
         }
+        else
+        {
+            characterController.Move(movement * MovementSpeed * Time.deltaTime);
+
+            if (characterController.isGrounded == false)
+            {
+                characterController.Move(new Vector3(0f, Gravity * -1 * Time.deltaTime * Time.deltaTime, 0f));
+
+            }
+            if (characterController.isGrounded == true)
+            {
+
+                _jumps = 1;
+
+            }
+            if ((isWallRight || isWallLeft) && characterController.isGrounded == false)
+            {
+                StartWallrun();
+
+            }
+            if (_isJumping == true)
+            {
+                characterController.Move(new Vector3(JumpSpeed * _jumpMultiplyer * _wallJumpAdjuster * Time.deltaTime, JumpSpeed * _jumpMultiplyer * Time.deltaTime, 0f));
+
+
+                _jumpMultiplyer *= _jumpAduster;
+                if (_jumpMultiplyer <= 0.1f)
+                {
+                    _isJumping = false;
+                }
+            }
+        }
+        
+
         CheckForWall();
-        if((isWallRight||isWallLeft) && characterController.isGrounded == false)
-        {
-            StartWallrun();
-            
-        }
+        
         CheckForRail();
         if (isRailGrinding)
         {
             StartRailGrinding();
         }
-        if (_isJumping == true)
-        {
-            characterController.Move(new Vector3(JumpSpeed * _jumpMultiplyer * _wallJumpAdjuster * Time.deltaTime, JumpSpeed * _jumpMultiplyer * Time.deltaTime, 0f));
-
-
-            _jumpMultiplyer *= _jumpAduster;
-            if (_jumpMultiplyer <= 0.1f )
-            {
-                _isJumping = false;
-            }
-        }
+        
     }
 
     private void Jump()
@@ -97,11 +131,11 @@ public class PlayerMovement : MonoBehaviour
             _jumpAduster=0.9f;
             if(isWallLeft)
             {
-                _wallJumpAdjuster = 3.0f;
+                _wallJumpAdjuster = 1.5f;
             }
             else if(isWallRight)
             {
-                _wallJumpAdjuster = -3.0f;
+                _wallJumpAdjuster = -1.5f;
             }
             else
             {
@@ -144,7 +178,7 @@ public class PlayerMovement : MonoBehaviour
     private void StopWallRun()
     {
         isWallRunning = false;
-        Gravity = 5.0f;
+        Gravity = 1000f;
     }
 
     private void CheckForWall() //make sure to call in void Update
@@ -202,7 +236,22 @@ public class PlayerMovement : MonoBehaviour
     private void StopRailGrinding()
     {
         
-        Gravity = 5.0f;
+        Gravity = 10f;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if(other.gameObject.layer==10)
+        {
+            isGrounded = true;
+        }
+    }
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.gameObject.layer == 10)
+        {
+            isGrounded = false;
+        }
     }
     private void OnEnable()
     {
