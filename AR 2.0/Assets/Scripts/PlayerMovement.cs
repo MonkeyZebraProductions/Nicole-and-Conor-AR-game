@@ -10,14 +10,16 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] public float JumpSpeed = 5f;
     [SerializeField] public float Gravity = 5f;
     [SerializeField] public float CheckDistance = 1f;
+    [SerializeField] public float Smooth=5f;
     public bool IsVuforia;
-   
+
+    Quaternion target;
 
     private Vector2 move;
     private bool _isWalled, _isJumping, _isDashing,isGrounded,_hasDoneEntrence;
     private CharacterController characterController;
     private float _jumpMultiplyer = 1;
-    private float _jumps,_jumpAduster,_wallJumpAdjuster,_gravity;
+    private float _jumps,_jumpAduster,_wallJumpAdjuster,_gravity,_rotateX,_rotateY,_totalRotate;
     private GameObject _currentRail=null;
     private RaycastHit hit;
 
@@ -57,9 +59,74 @@ public class PlayerMovement : MonoBehaviour
     private void FixedUpdate()
     {
         move = controls.Gameplay.Move.ReadValue<Vector2>();
+        Vector3 movement= (move.y * transform.forward);
+        Debug.Log(move);
+        if (move.y == -1)
+        {
+            target = Quaternion.Euler(0, 180, 0);
+            transform.rotation = target;
+            movement = (move.y * -transform.forward);
+        }
+        else if (move.y<=0 && move.x<=0)
+        {
+            target = Quaternion.Euler(0, -135, 0);
+            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
+            movement = (move.y * -transform.forward);
+        }
+        else if(move.y <= 0 && move.x >= 0)
+        {
+            target = Quaternion.Euler(0, 135, 0);
+            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
+            movement = (move.y * -transform.forward);
+        }
 
-        Vector3 movement = (move.y * transform.forward) + (move.x * transform.right);
-        if(IsVuforia)
+        if (move.y == 1)
+        {
+            target = Quaternion.Euler(0, 0, 0);
+            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
+            movement = (move.y * transform.forward);
+        }
+        else if (move.y >= 0 && move.x <= 0)
+        {
+            target = Quaternion.Euler(0, -45, 0);
+            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
+            movement = (move.y * transform.forward);
+        }
+        else if (move.y >= 0 && move.x >= 0)
+        {
+            target = Quaternion.Euler(0, 45, 0);
+            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
+            movement = (move.y * transform.forward);
+        }
+        
+
+        if (move.y == 0 && move.x == -1)
+        {
+            target = Quaternion.Euler(0, -90, 0);
+            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
+            movement = (move.x * -transform.forward);
+        }
+        else if (move.y == 0 && move.x == 1)
+        {
+            target = Quaternion.Euler(0, 90, 0);
+            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
+            movement = (move.x * transform.forward);
+        }
+        else if(move.y == 0 && move.x == 0)
+        {
+            target = Quaternion.Euler(0, 0, 0);
+            transform.rotation = target;
+            movement = (move.y * transform.forward);
+        }
+        
+
+
+
+
+
+
+
+        if (IsVuforia)
         {
             transform.position += movement * MovementSpeed * Time.deltaTime;
             if(isGrounded)
