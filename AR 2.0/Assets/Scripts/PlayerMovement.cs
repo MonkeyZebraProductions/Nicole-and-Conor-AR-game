@@ -16,13 +16,13 @@ public class PlayerMovement : MonoBehaviour
     Quaternion target;
     private Vector3 movement;
     private Vector2 move;
-    private bool _isWalled, _isJumping, _isDashing,isGrounded,_hasDoneEntrence;
+    private bool _hasCalculated, _isJumping, _isDashing,isGrounded,_hasDoneEntrence;
     private CharacterController characterController;
     private float _jumpMultiplyer = 1;
-    private float _jumps,_jumpAduster,_wallJumpAdjuster,_gravity,_rotateX,_rotateY,_totalRotate;
+    private float _jumps,_jumpAduster,_wallJumpAdjuster,_gravity,wallRotationDifference, tempWallRotation;
    
-    private GameObject _currentRail,_currentRightWall,_currentLeftWall = null;
-    private RaycastHit railhit,leftwallhit,rightwallhit;
+    private GameObject _currentRail,_currentWall = null;
+    private RaycastHit railhit;
 
     public LayerMask whatIsWall,whatIsRail;
     public float wallrunForce, maxWallrunTime, maxWallSpeed;
@@ -72,6 +72,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (IsVuforia)
         {
+            
             transform.position += movement * MovementSpeed * Time.deltaTime;
             if(isGrounded)
             {
@@ -135,7 +136,7 @@ public class PlayerMovement : MonoBehaviour
             }
         }
         CheckForWall();
-
+        Debug.Log(_hasCalculated);
 
 
         CheckForRail();
@@ -216,11 +217,11 @@ public class PlayerMovement : MonoBehaviour
             _jumpAduster=0.9f;
             if(isWallLeft)
             {
-                _wallJumpAdjuster = 1.5f;
+                _wallJumpAdjuster = -1.5f;
             }
             else if(isWallRight)
             {
-                _wallJumpAdjuster = -1.5f;
+                _wallJumpAdjuster = 1.5f;
             }
             else
             {
@@ -228,7 +229,7 @@ public class PlayerMovement : MonoBehaviour
             }
             //JumpSound.Play();
         }
-
+        
     }
 
     private void JumpCancel()
@@ -238,15 +239,24 @@ public class PlayerMovement : MonoBehaviour
 
     private void StartWallrun()
     {
+       
         
+            
         isWallRunning = true;
         //allowDashForceCounter = false;
         //_isJumping = true;
         _gravity = 0.0f;
         if(IsVuforia)
         {
-            transform.position+=transform.forward * Time.deltaTime * maxWallSpeed;
-
+            
+            if (tempWallRotation < -95 || tempWallRotation > 95)
+            {
+                transform.position -= transform.forward * Time.deltaTime * maxWallSpeed;
+            }
+            else
+            {
+                transform.position += transform.forward * Time.deltaTime * maxWallSpeed;
+            }
             //Make sure char sticks to wall
             if (move.x < 0.0f)
             {
@@ -261,16 +271,27 @@ public class PlayerMovement : MonoBehaviour
         {
             if (characterController.velocity.magnitude <= maxWallSpeed)
             {
-                characterController.Move(transform.forward * Time.deltaTime * maxWallSpeed);
+
+                if (tempWallRotation < 275 && tempWallRotation > 95)
+                {
+                    characterController.Move(-transform.forward *Time.deltaTime * maxWallSpeed);
+
+                }
+                else
+                {
+                    characterController.Move(transform.forward * Time.deltaTime * maxWallSpeed);
+
+                }
+                
 
                 //Make sure char sticks to wall
                 if (isWallRight)
                 {
-                    characterController.Move(transform.right * Time.deltaTime * maxWallSpeed);
+                    characterController.Move(-transform.right * Time.deltaTime * maxWallSpeed);
                 }
                 else
                 {
-                    characterController.Move(-transform.right * Time.deltaTime * maxWallSpeed);
+                    characterController.Move(transform.right * Time.deltaTime * maxWallSpeed);
                 }
 
             }
@@ -281,6 +302,7 @@ public class PlayerMovement : MonoBehaviour
     private void StopWallRun()
     {
         isWallRunning = false;
+        _hasCalculated = false;
         if (IsVuforia)
         {
             _gravity = Gravity;
@@ -294,38 +316,36 @@ public class PlayerMovement : MonoBehaviour
     private void CheckForWall() //make sure to call in void Update
     {
         
-        isWallRight = Physics.Raycast(transform.position, transform.right, out rightwallhit, CheckDistance, whatIsWall);
-
-        isWallLeft = Physics.Raycast(transform.position, -transform.right, out leftwallhit, CheckDistance, whatIsWall);
-        Debug.DrawRay(transform.position, transform.right* CheckDistance, Color.yellow);
-       
-        Debug.DrawRay(transform.position, -transform.right * CheckDistance, Color.red);
        
         //leave wall run
         if (!isWallLeft && !isWallRight)
         {
             StopWallRun();
         }
-
+        Debug.Log(tempWallRotation);
         
         //reset double jump (if you have one :D)
-        if (isWallLeft)
+        if (isWallLeft||isWallRight)
         {
             _jumps = 1;
-            _currentLeftWall = leftwallhit.collider.gameObject;
-            target = Quaternion.Euler(0, _currentLeftWall.transform.rotation.y, 0);
-            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
-            //transform.rotation = _currentWall.transform.rotation;
+            wallRotationDifference = transform.rotation.eulerAngles.y - _currentWall.transform.rotation.eulerAngles.y;
+            if (_hasCalculated == false)
+            {
+                tempWallRotation = wallRotationDifference;
+                _hasCalculated = true;
+            }
 
-        }
-        if (isWallLeft)
-        {
-            _jumps = 1;
-            _currentRightWall = rightwallhit.collider.gameObject;
-            target = Quaternion.Euler(0, _currentRightWall.transform.rotation.y, 0);
-            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
-            //transform.rotation = _currentWall.transform.rotation;
+            if (wallRotationDifference <= 275 && wallRotationDifference >= 265 || wallRotationDifference >= 85 && wallRotationDifference <= 95)
+            {
+                isWallLeft = false;
+                isWallRight = false;
 
+            }
+            else
+            {
+                transform.rotation = _currentWall.transform.rotation;
+            }
+            
         }
 
     }
@@ -385,7 +405,19 @@ public class PlayerMovement : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if(other.gameObject.layer==10)
+        if(other.gameObject.layer==11)
+        {
+            isWallLeft = true;
+            _currentWall = other.gameObject;
+            
+        }
+        if (other.gameObject.layer == 12)
+        {
+            isWallRight = true;
+            _currentWall = other.gameObject;
+            
+        }
+        if (other.gameObject.layer==10)
         {
             isGrounded = true;
             _hasDoneEntrence=true;
@@ -396,6 +428,16 @@ public class PlayerMovement : MonoBehaviour
         if (other.gameObject.layer == 10)
         {
             isGrounded = false;
+        }
+        if (other.gameObject.layer == 11)
+        {
+            isWallLeft = false;
+            
+        }
+        if (other.gameObject.layer == 12)
+        {
+            isWallRight = false;
+            
         }
     }
     private void OnEnable()
