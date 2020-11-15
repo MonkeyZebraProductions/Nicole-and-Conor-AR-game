@@ -14,14 +14,15 @@ public class PlayerMovement : MonoBehaviour
     public bool IsVuforia;
 
     Quaternion target;
-
+    private Vector3 movement;
     private Vector2 move;
     private bool _isWalled, _isJumping, _isDashing,isGrounded,_hasDoneEntrence;
     private CharacterController characterController;
     private float _jumpMultiplyer = 1;
     private float _jumps,_jumpAduster,_wallJumpAdjuster,_gravity,_rotateX,_rotateY,_totalRotate;
-    private GameObject _currentRail=null;
-    private RaycastHit hit;
+   
+    private GameObject _currentRail,_currentRightWall,_currentLeftWall = null;
+    private RaycastHit railhit,leftwallhit,rightwallhit;
 
     public LayerMask whatIsWall,whatIsRail;
     public float wallrunForce, maxWallrunTime, maxWallSpeed;
@@ -59,21 +60,107 @@ public class PlayerMovement : MonoBehaviour
     private void FixedUpdate()
     {
         move = controls.Gameplay.Move.ReadValue<Vector2>();
-        Vector3 movement= (move.y * transform.forward);
-        Debug.Log(move);
+       
+        
+
+        movement = (move.y * transform.forward);
+        if(!isWallRunning)
+        {
+            CheckRotation();
+        }
+        
+
+        if (IsVuforia)
+        {
+            transform.position += movement * MovementSpeed * Time.deltaTime;
+            if(isGrounded)
+            {
+                _jumps = 1;
+            }
+            else
+            {
+                transform.position-= new Vector3(0f, _gravity * Time.deltaTime * Time.deltaTime, 0f);
+            }
+
+            if (_isJumping == true)
+            {
+               transform.position+=new Vector3(JumpSpeed * _jumpMultiplyer * _wallJumpAdjuster * Time.deltaTime, JumpSpeed * _jumpMultiplyer * Time.deltaTime, 0f);
+                
+
+                _jumpMultiplyer *= _jumpAduster;
+                if (_jumpMultiplyer <= 0.1f)
+                {
+                    _isJumping = false;
+                }
+                
+            }
+            if ((isWallRight || isWallLeft) && isGrounded == false)
+            {
+                StartWallrun();
+
+            }
+        }
+        else
+        {
+            characterController.Move(movement * MovementSpeed * Time.deltaTime);
+
+            if (characterController.isGrounded == false)
+            {
+                characterController.Move(new Vector3(0f, _gravity * -1 * Time.deltaTime * Time.deltaTime, 0f));
+
+            }
+            if (characterController.isGrounded == true)
+            {
+
+                _jumps = 1;
+
+            }
+            
+            if (_isJumping == true)
+            {
+                characterController.Move(new Vector3(JumpSpeed * _jumpMultiplyer * _wallJumpAdjuster * Time.deltaTime, JumpSpeed * _jumpMultiplyer * Time.deltaTime, 0f));
+
+                
+                _jumpMultiplyer *= _jumpAduster;
+                if (_jumpMultiplyer <= 0.1f)
+                {
+                    _isJumping = false;
+                }
+               
+            }
+            if ((isWallRight || isWallLeft) && characterController.isGrounded == false)
+            {
+                StartWallrun();
+
+            }
+        }
+        CheckForWall();
+
+
+
+        CheckForRail();
+        if (isRailGrinding)
+        {
+            StartRailGrinding();
+        }
+        
+    }
+
+    private void CheckRotation()
+    {
         if (move.y == -1)
         {
             target = Quaternion.Euler(0, 180, 0);
             transform.rotation = target;
             movement = (move.y * -transform.forward);
         }
-        else if (move.y<=0 && move.x<=0)
+        else if (move.y <= 0 && move.x <= 0)
         {
             target = Quaternion.Euler(0, -135, 0);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
             movement = (move.y * -transform.forward);
         }
-        else if(move.y <= 0 && move.x >= 0)
+        else if (move.y <= 0 && move.x >= 0)
         {
             target = Quaternion.Euler(0, 135, 0);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
@@ -98,7 +185,7 @@ public class PlayerMovement : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
             movement = (move.y * transform.forward);
         }
-        
+
 
         if (move.y == 0 && move.x == -1)
         {
@@ -112,93 +199,13 @@ public class PlayerMovement : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
             movement = (move.x * transform.forward);
         }
-        else if(move.y == 0 && move.x == 0)
+        else if (move.y == 0 && move.x == 0)
         {
             target = Quaternion.Euler(0, 0, 0);
             transform.rotation = target;
             movement = (move.y * transform.forward);
         }
-        
-
-
-
-
-
-
-
-        if (IsVuforia)
-        {
-            transform.position += movement * MovementSpeed * Time.deltaTime;
-            if(isGrounded)
-            {
-                _jumps = 1;
-            }
-            else
-            {
-                transform.position-= new Vector3(0f, _gravity * Time.deltaTime * Time.deltaTime, 0f);
-            }
-
-            if (_isJumping == true)
-            {
-               transform.position+=new Vector3(JumpSpeed * _jumpMultiplyer * _wallJumpAdjuster * Time.deltaTime, JumpSpeed * _jumpMultiplyer * Time.deltaTime, 0f);
-
-
-                _jumpMultiplyer *= _jumpAduster;
-                if (_jumpMultiplyer <= 0.1f)
-                {
-                    _isJumping = false;
-                }
-            }
-            if ((isWallRight || isWallLeft) && isGrounded == false)
-            {
-                StartWallrun();
-
-            }
-        }
-        else
-        {
-            characterController.Move(movement * MovementSpeed * Time.deltaTime);
-
-            if (characterController.isGrounded == false)
-            {
-                characterController.Move(new Vector3(0f, _gravity * -1 * Time.deltaTime * Time.deltaTime, 0f));
-
-            }
-            if (characterController.isGrounded == true)
-            {
-
-                _jumps = 1;
-
-            }
-            if ((isWallRight || isWallLeft) && characterController.isGrounded == false)
-            {
-                StartWallrun();
-
-            }
-            if (_isJumping == true)
-            {
-                characterController.Move(new Vector3(JumpSpeed * _jumpMultiplyer * _wallJumpAdjuster * Time.deltaTime, JumpSpeed * _jumpMultiplyer * Time.deltaTime, 0f));
-
-
-                _jumpMultiplyer *= _jumpAduster;
-                if (_jumpMultiplyer <= 0.1f)
-                {
-                    _isJumping = false;
-                }
-            }
-        }
-        
-
-        CheckForWall();
-        
-        CheckForRail();
-        if (isRailGrinding)
-        {
-            StartRailGrinding();
-        }
-        
     }
-
     private void Jump()
     {
         if (_jumps > 0)
@@ -287,29 +294,46 @@ public class PlayerMovement : MonoBehaviour
     private void CheckForWall() //make sure to call in void Update
     {
         
-        isWallRight = Physics.Raycast(transform.position, transform.right, CheckDistance, whatIsWall);
-        isWallLeft = Physics.Raycast(transform.position, -transform.right, CheckDistance, whatIsWall);
+        isWallRight = Physics.Raycast(transform.position, transform.right, out rightwallhit, CheckDistance, whatIsWall);
+
+        isWallLeft = Physics.Raycast(transform.position, -transform.right, out leftwallhit, CheckDistance, whatIsWall);
         Debug.DrawRay(transform.position, transform.right* CheckDistance, Color.yellow);
+       
         Debug.DrawRay(transform.position, -transform.right * CheckDistance, Color.red);
+       
         //leave wall run
         if (!isWallLeft && !isWallRight)
         {
             StopWallRun();
         }
 
-
+        
         //reset double jump (if you have one :D)
-        if (isWallLeft || isWallRight)
+        if (isWallLeft)
         {
             _jumps = 1;
+            _currentLeftWall = leftwallhit.collider.gameObject;
+            target = Quaternion.Euler(0, _currentLeftWall.transform.rotation.y, 0);
+            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
+            //transform.rotation = _currentWall.transform.rotation;
+
         }
-        
+        if (isWallLeft)
+        {
+            _jumps = 1;
+            _currentRightWall = rightwallhit.collider.gameObject;
+            target = Quaternion.Euler(0, _currentRightWall.transform.rotation.y, 0);
+            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
+            //transform.rotation = _currentWall.transform.rotation;
+
+        }
+
     }
 
     private void CheckForRail()
     {
-        isRailGrinding = Physics.Raycast(transform.position, -transform.up, out hit,CheckDistance*2f, whatIsRail);
-        Debug.Log(isRailGrinding);
+        isRailGrinding = Physics.Raycast(transform.position, -transform.up, out railhit,CheckDistance*2f, whatIsRail);
+       
         Debug.DrawRay(transform.position, -transform.up* CheckDistance * 2f,Color.green);
         if (!isRailGrinding)
         {
@@ -318,7 +342,7 @@ public class PlayerMovement : MonoBehaviour
             //reset double jump (if you have one :D)
         if (isRailGrinding)
         {
-          _currentRail = hit.collider.gameObject;
+          _currentRail = railhit.collider.gameObject;
             
           transform.rotation = _currentRail.transform.rotation;
           _jumps = 1;
