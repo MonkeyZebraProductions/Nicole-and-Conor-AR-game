@@ -16,10 +16,10 @@ public class PlayerMovement : MonoBehaviour
     Quaternion target;
     private Vector3 movement;
     private Vector2 move;
-    private bool _hasCalculated, _isJumping, _isDashing,isGrounded,_hasDoneEntrence;
+    private bool _hasCalculatedWall, _hasCalculatedRail, _isJumping, _isDashing,isGrounded,_hasDoneEntrence;
     private CharacterController characterController;
     private float _jumpMultiplyer = 1;
-    private float _jumps,_jumpAduster,_wallJumpAdjuster,_gravity,wallRotationDifference, tempWallRotation;
+    private float _jumps,_jumpAduster,_wallJumpAdjuster,_gravity,wallRotationDifference, tempWallRotation, wallJumpForce,railRotationDifference, tempRailRotation;
    
     private GameObject _currentRail,_currentWall = null;
     private RaycastHit railhit;
@@ -64,9 +64,10 @@ public class PlayerMovement : MonoBehaviour
         
 
         movement = (move.y * transform.forward);
-        if(!isWallRunning)
+        if(!isWallRunning && !isRailGrinding)
         {
             CheckRotation();
+            Debug.Log("Taa");
         }
         
 
@@ -114,12 +115,12 @@ public class PlayerMovement : MonoBehaviour
             {
 
                 _jumps = 1;
-
+                wallJumpForce = 0.0f;
             }
             
             if (_isJumping == true)
             {
-                characterController.Move(new Vector3(JumpSpeed * _jumpMultiplyer * _wallJumpAdjuster * Time.deltaTime, JumpSpeed * _jumpMultiplyer * Time.deltaTime, 0f));
+                characterController.Move(new Vector3(JumpSpeed * _jumpMultiplyer * _wallJumpAdjuster * Time.deltaTime, JumpSpeed * _jumpMultiplyer * Time.deltaTime, JumpSpeed * _jumpMultiplyer* wallJumpForce * Time.deltaTime));
 
                 
                 _jumpMultiplyer *= _jumpAduster;
@@ -136,10 +137,11 @@ public class PlayerMovement : MonoBehaviour
             }
         }
         CheckForWall();
-        Debug.Log(_hasCalculated);
+        
 
 
         CheckForRail();
+        
         if (isRailGrinding)
         {
             StartRailGrinding();
@@ -149,7 +151,8 @@ public class PlayerMovement : MonoBehaviour
 
     private void CheckRotation()
     {
-        if (move.y == -1)
+        
+        if (move.y <= -0.9)
         {
             target = Quaternion.Euler(0, 180, 0);
             transform.rotation = target;
@@ -168,7 +171,7 @@ public class PlayerMovement : MonoBehaviour
             movement = (move.y * -transform.forward);
         }
 
-        if (move.y == 1)
+        if (move.y >=0.9)
         {
             target = Quaternion.Euler(0, 0, 0);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
@@ -188,13 +191,13 @@ public class PlayerMovement : MonoBehaviour
         }
 
 
-        if (move.y == 0 && move.x == -1)
+        if (move.y == 0 && move.x <= -0.9)
         {
             target = Quaternion.Euler(0, -90, 0);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
             movement = (move.x * -transform.forward);
         }
-        else if (move.y == 0 && move.x == 1)
+        else if (move.y == 0 && move.x >= 0.9)
         {
             target = Quaternion.Euler(0, 90, 0);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
@@ -251,18 +254,22 @@ public class PlayerMovement : MonoBehaviour
             
             if (tempWallRotation < -95 || tempWallRotation > 95)
             {
-                transform.position -= transform.forward * Time.deltaTime * maxWallSpeed;
+                //transform.rotation= new Quaternion(0,transform.ro.)
+                transform.position = -transform.forward * Time.deltaTime * maxWallSpeed;
+                wallJumpForce=-1.0f;
             }
             else
             {
+                //transform.rotation = _currentWall.transform.rotation;
                 transform.position += transform.forward * Time.deltaTime * maxWallSpeed;
+                wallJumpForce = 1.0f;
             }
             //Make sure char sticks to wall
-            if (move.x < 0.0f)
+            if (isWallRight)
             {
                 transform.position += transform.right * Time.deltaTime * maxWallSpeed;
             }
-            else if(move.x > 0.0f)
+            else
             {
                 transform.position += -transform.right * Time.deltaTime * maxWallSpeed;
             }
@@ -302,7 +309,7 @@ public class PlayerMovement : MonoBehaviour
     private void StopWallRun()
     {
         isWallRunning = false;
-        _hasCalculated = false;
+        _hasCalculatedWall = false;
         if (IsVuforia)
         {
             _gravity = Gravity;
@@ -322,17 +329,17 @@ public class PlayerMovement : MonoBehaviour
         {
             StopWallRun();
         }
-        Debug.Log(tempWallRotation);
+        
         
         //reset double jump (if you have one :D)
         if (isWallLeft||isWallRight)
         {
             _jumps = 1;
             wallRotationDifference = transform.rotation.eulerAngles.y - _currentWall.transform.rotation.eulerAngles.y;
-            if (_hasCalculated == false)
+            if (_hasCalculatedWall == false)
             {
                 tempWallRotation = wallRotationDifference;
-                _hasCalculated = true;
+                _hasCalculatedWall = true;
             }
 
             if (wallRotationDifference <= 275 && wallRotationDifference >= 265 || wallRotationDifference >= 85 && wallRotationDifference <= 95)
@@ -345,63 +352,69 @@ public class PlayerMovement : MonoBehaviour
             {
                 transform.rotation = _currentWall.transform.rotation;
             }
-            
+
         }
 
     }
 
     private void CheckForRail()
     {
-        isRailGrinding = Physics.Raycast(transform.position, -transform.up, out railhit,CheckDistance*2f, whatIsRail);
+        isRailGrinding = Physics.Raycast(transform.position, -transform.up, out railhit,CheckDistance, whatIsRail);
        
-        Debug.DrawRay(transform.position, -transform.up* CheckDistance * 2f,Color.green);
-        if (!isRailGrinding)
-        {
-            
-        }
+        Debug.DrawRay(transform.position, -transform.up* CheckDistance,Color.green);
+        
             //reset double jump (if you have one :D)
         if (isRailGrinding)
         {
           _currentRail = railhit.collider.gameObject;
+          railRotationDifference = transform.rotation.eulerAngles.y - _currentRail.transform.rotation.eulerAngles.y;
+            if (_hasCalculatedRail == false)
+            {
+                tempRailRotation = railRotationDifference;
+                _hasCalculatedRail = true;
+            }
             
-          transform.rotation = _currentRail.transform.rotation;
+            transform.rotation = _currentRail.transform.rotation;
           _jumps = 1;
         }
+        else
+        {
+            _hasCalculatedRail = false;
+        }
+        
     }
     private void StartRailGrinding()
     {
         if(IsVuforia)
         {
-            transform.position += transform.forward * Time.deltaTime * maxWallSpeed;
-            if (move.x > 0.0f)
-            {
-                transform.position += -transform.right * Time.deltaTime * maxWallSpeed;
+            if (tempRailRotation < -95 || tempRailRotation > 95)
+            {  
+                transform.position = -transform.forward * Time.deltaTime * maxWallSpeed;
             }
-            else if (move.x < 0.0f)
+            else
             {
-                transform.position += transform.right * Time.deltaTime * maxWallSpeed;
+                transform.position += transform.forward * Time.deltaTime * maxWallSpeed; 
             }
+           
+            
         }
         else
         {
-            characterController.Move(transform.forward * Time.deltaTime * maxWallSpeed);
-            if (move.x > 0.0f)
+            if (tempRailRotation < -95 || tempRailRotation > 95)
             {
-                characterController.Move(-transform.right * Time.deltaTime * maxWallSpeed);
+                characterController.Move(-transform.forward * Time.deltaTime * maxWallSpeed);
             }
-            else if (move.x < 0.0f)
+            else
             {
-                characterController.Move(transform.right * Time.deltaTime * maxWallSpeed);
+                characterController.Move(transform.forward * Time.deltaTime * maxWallSpeed);
             }
+           
+            
         }
             
         
     }
-    private void StopRailGrinding()
-    {
-        
-        Gravity = 10f;
-    }
+    
 
     private void OnTriggerEnter(Collider other)
     {
