@@ -151,8 +151,8 @@ public class PlayerMovement : MonoBehaviour
 
     private void CheckRotation()
     {
-        
-        if (move.y <= -0.9)
+        Debug.Log(move);
+        if (move.y <= -0.85)
         {
             target = Quaternion.Euler(0, 180, 0);
             transform.rotation = target;
@@ -162,16 +162,16 @@ public class PlayerMovement : MonoBehaviour
         {
             target = Quaternion.Euler(0, -135, 0);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
-            movement = (move.y * -transform.forward);
+            movement = ((move.y+move.x)/1.4f * -transform.forward);
         }
         else if (move.y <= 0 && move.x >= 0)
         {
             target = Quaternion.Euler(0, 135, 0);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
-            movement = (move.y * -transform.forward);
+            movement = ((-move.y + move.x) / 1.4f * transform.forward);
         }
 
-        if (move.y >=0.9)
+        if (move.y >=0.85)
         {
             target = Quaternion.Euler(0, 0, 0);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
@@ -181,29 +181,29 @@ public class PlayerMovement : MonoBehaviour
         {
             target = Quaternion.Euler(0, -45, 0);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
-            movement = (move.y * transform.forward);
+            movement = ((move.y + -move.x) / 1.4f * transform.forward);
         }
         else if (move.y >= 0 && move.x >= 0)
         {
             target = Quaternion.Euler(0, 45, 0);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
-            movement = (move.y * transform.forward);
+            movement = ((move.y + move.x) / 1.4f * transform.forward);
         }
 
 
-        if (move.y == 0 && move.x <= -0.9)
+        if (move.y <= 0.15 && move.y >= -0.15 && move.x <= -0.85)
         {
             target = Quaternion.Euler(0, -90, 0);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
             movement = (move.x * -transform.forward);
         }
-        else if (move.y == 0 && move.x >= 0.9)
+        else if (move.y <= 0.15 && move.y >= -0.15 && move.x >= 0.85)
         {
             target = Quaternion.Euler(0, 90, 0);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
             movement = (move.x * transform.forward);
         }
-        else if (move.y == 0 && move.x == 0)
+        else if (move.y ==0 && move.x == 0)
         {
             target = Quaternion.Euler(0, 0, 0);
             transform.rotation = target;
