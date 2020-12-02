@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Events;
 public class PlayerMovement : MonoBehaviour
 {
     private PlayerControls controls;
@@ -13,10 +14,13 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] public float Smooth=5f;
     public bool IsVuforia;
 
+    float smoothingVelocity;
+
     Quaternion target;
     private Vector3 movement;
+    Vector3 moveDir;
     private Vector2 move;
-    private bool _hasCalculatedWall, _hasCalculatedRail, _isJumping, _isDashing,isGrounded,_hasDoneEntrence;
+    private bool _hasCalculatedWall, _hasCalculatedRail, _isJumping, _isCombo,isGrounded,_hasDoneEntrence;
     private CharacterController characterController;
     private float _jumpMultiplyer = 1;
     private float _jumps,_jumpAduster,_wallJumpAdjuster,_gravity,wallRotationDifference, tempWallRotation, wallJumpForce,railRotationDifference, tempRailRotation;
@@ -30,7 +34,7 @@ public class PlayerMovement : MonoBehaviour
     bool isWallRunning;
     public float maxWallRunCameraTilt, wallRunCameraTilt;
 
-
+    public UnityEvent ScoreIncrease, ComboStart, ScoreStop, ComboStop,MultiplyerIncrease;
     private void Awake()
     {
         controls = new PlayerControls();
@@ -60,24 +64,25 @@ public class PlayerMovement : MonoBehaviour
     private void FixedUpdate()
     {
         move = controls.Gameplay.Move.ReadValue<Vector2>();
-       
-        
 
-        movement = (move.y * transform.forward);
-        if(!isWallRunning && !isRailGrinding)
+
+
+
+        if (!isWallRunning && !isRailGrinding)
         {
             CheckRotation();
-            Debug.Log("Taa");
         }
+
         
 
         if (IsVuforia)
         {
             
-            transform.position += movement * MovementSpeed * Time.deltaTime;
+            
             if(isGrounded)
             {
                 _jumps = 1;
+                ComboStop.Invoke();
             }
             else
             {
@@ -99,12 +104,13 @@ public class PlayerMovement : MonoBehaviour
             if ((isWallRight || isWallLeft) && isGrounded == false)
             {
                 StartWallrun();
+                ScoreIncrease.Invoke();
 
             }
         }
         else
         {
-            characterController.Move(movement * MovementSpeed * Time.deltaTime);
+           
 
             if (characterController.isGrounded == false)
             {
@@ -113,7 +119,7 @@ public class PlayerMovement : MonoBehaviour
             }
             if (characterController.isGrounded == true)
             {
-
+                ComboStop.Invoke();
                 _jumps = 1;
                 wallJumpForce = 0.0f;
             }
@@ -133,6 +139,7 @@ public class PlayerMovement : MonoBehaviour
             if ((isWallRight || isWallLeft) && characterController.isGrounded == false)
             {
                 StartWallrun();
+                ScoreIncrease.Invoke(); 
 
             }
         }
@@ -151,63 +158,25 @@ public class PlayerMovement : MonoBehaviour
 
     private void CheckRotation()
     {
-        Debug.Log(move);
-        if (move.y <= -0.85)
-        {
-            target = Quaternion.Euler(0, 180, 0);
-            transform.rotation = target;
-            movement = (move.y * -transform.forward);
-        }
-        else if (move.y <= 0 && move.x <= 0)
-        {
-            target = Quaternion.Euler(0, -135, 0);
-            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
-            movement = ((move.y+move.x)/1.4f * -transform.forward);
-        }
-        else if (move.y <= 0 && move.x >= 0)
-        {
-            target = Quaternion.Euler(0, 135, 0);
-            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
-            movement = ((-move.y + move.x) / 1.4f * transform.forward);
-        }
-
-        if (move.y >=0.85)
-        {
-            target = Quaternion.Euler(0, 0, 0);
-            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
-            movement = (move.y * transform.forward);
-        }
-        else if (move.y >= 0 && move.x <= 0)
-        {
-            target = Quaternion.Euler(0, -45, 0);
-            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
-            movement = ((move.y + -move.x) / 1.4f * transform.forward);
-        }
-        else if (move.y >= 0 && move.x >= 0)
-        {
-            target = Quaternion.Euler(0, 45, 0);
-            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
-            movement = ((move.y + move.x) / 1.4f * transform.forward);
-        }
+        Vector3 direction = new Vector3(move.x, 0, move.y);
 
 
-        if (move.y <= 0.15 && move.y >= -0.15 && move.x <= -0.85)
+        if (direction.magnitude >= 0.1f)
         {
-            target = Quaternion.Euler(0, -90, 0);
-            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
-            movement = (move.x * -transform.forward);
-        }
-        else if (move.y <= 0.15 && move.y >= -0.15 && move.x >= 0.85)
-        {
-            target = Quaternion.Euler(0, 90, 0);
-            transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime * Smooth);
-            movement = (move.x * transform.forward);
-        }
-        else if (move.y ==0 && move.x == 0)
-        {
-            target = Quaternion.Euler(0, 0, 0);
-            transform.rotation = target;
-            movement = (move.y * transform.forward);
+            float targetAngel = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+            float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngel, ref smoothingVelocity, Smooth);
+            transform.rotation = Quaternion.Euler(0f, angle, 0f);
+
+             moveDir = Quaternion.Euler(0f, targetAngel, 0f) * Vector3.forward;
+            if(IsVuforia)
+            {
+                transform.position += moveDir.normalized * MovementSpeed * Time.deltaTime;
+            }
+            else
+            {
+                characterController.Move(moveDir.normalized * MovementSpeed * Time.deltaTime);
+            }
+            
         }
     }
     private void Jump()
@@ -220,11 +189,26 @@ public class PlayerMovement : MonoBehaviour
             _jumpAduster=0.9f;
             if(isWallLeft)
             {
-                _wallJumpAdjuster = -1.5f;
+                if(IsVuforia)
+                {
+                    _wallJumpAdjuster = 1.5f;
+                }
+                else
+                {
+                    _wallJumpAdjuster = -1.5f;
+                }
+                
             }
             else if(isWallRight)
             {
-                _wallJumpAdjuster = 1.5f;
+                if (IsVuforia)
+                {
+                    _wallJumpAdjuster = -1.5f;
+                }
+                else
+                {
+                    _wallJumpAdjuster = 1.5f;
+                }
             }
             else
             {
@@ -242,20 +226,17 @@ public class PlayerMovement : MonoBehaviour
 
     private void StartWallrun()
     {
-       
         
-            
         isWallRunning = true;
-        //allowDashForceCounter = false;
-        //_isJumping = true;
+            
         _gravity = 0.0f;
         if(IsVuforia)
         {
             
-            if (tempWallRotation < -95 || tempWallRotation > 95)
+            if (tempWallRotation < 275 || tempWallRotation > 95)
             {
                 //transform.rotation= new Quaternion(0,transform.ro.)
-                transform.position = -transform.forward * Time.deltaTime * maxWallSpeed;
+                transform.position += -transform.forward * Time.deltaTime * maxWallSpeed;
                 wallJumpForce=-1.0f;
             }
             else
@@ -264,15 +245,7 @@ public class PlayerMovement : MonoBehaviour
                 transform.position += transform.forward * Time.deltaTime * maxWallSpeed;
                 wallJumpForce = 1.0f;
             }
-            //Make sure char sticks to wall
-            if (isWallRight)
-            {
-                transform.position += transform.right * Time.deltaTime * maxWallSpeed;
-            }
-            else
-            {
-                transform.position += -transform.right * Time.deltaTime * maxWallSpeed;
-            }
+            
         }
         else
         {
@@ -310,14 +283,10 @@ public class PlayerMovement : MonoBehaviour
     {
         isWallRunning = false;
         _hasCalculatedWall = false;
-        if (IsVuforia)
-        {
-            _gravity = Gravity;
-        }
-        else
-        {
-            _gravity = 1000f;
-        }
+       
+        _gravity = Gravity;
+        ScoreStop.Invoke();
+
     }
 
     private void CheckForWall() //make sure to call in void Update
@@ -352,7 +321,12 @@ public class PlayerMovement : MonoBehaviour
             {
                 transform.rotation = _currentWall.transform.rotation;
             }
-
+            if (!_isCombo)
+            {
+                ComboStart.Invoke();
+                _isCombo = true;
+            }
+            
         }
 
     }
@@ -373,23 +347,31 @@ public class PlayerMovement : MonoBehaviour
                 tempRailRotation = railRotationDifference;
                 _hasCalculatedRail = true;
             }
-            
+            if (!_isCombo)
+            {
+                ComboStart.Invoke();
+                _isCombo = true;
+            }
+            ScoreIncrease.Invoke();
+            MultiplyerIncrease.Invoke();
             transform.rotation = _currentRail.transform.rotation;
           _jumps = 1;
         }
         else
         {
             _hasCalculatedRail = false;
+            ScoreStop.Invoke();
         }
         
     }
     private void StartRailGrinding()
     {
-        if(IsVuforia)
+       
+        if (IsVuforia)
         {
             if (tempRailRotation < -95 || tempRailRotation > 95)
             {  
-                transform.position = -transform.forward * Time.deltaTime * maxWallSpeed;
+                transform.position += -transform.forward * Time.deltaTime * maxWallSpeed;
             }
             else
             {
@@ -418,7 +400,12 @@ public class PlayerMovement : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if(other.gameObject.layer==11)
+        if (other.gameObject.layer == 10)
+        {
+            isGrounded = true;
+            _hasDoneEntrence = true;
+        }
+        if (other.gameObject.layer==11)
         {
             isWallLeft = true;
             _currentWall = other.gameObject;
@@ -430,11 +417,7 @@ public class PlayerMovement : MonoBehaviour
             _currentWall = other.gameObject;
             
         }
-        if (other.gameObject.layer==10)
-        {
-            isGrounded = true;
-            _hasDoneEntrence=true;
-        }
+       
     }
     private void OnTriggerExit(Collider other)
     {
