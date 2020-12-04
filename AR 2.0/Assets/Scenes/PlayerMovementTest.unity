@@ -1495,6 +1495,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6733808323271398766, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
+      propertyPath: MultiplyerIncrease.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6733808323271398766, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
       propertyPath: CheckDistance
       value: 5.5
       objectReference: {fileID: 0}
@@ -1604,6 +1608,30 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6733808323271398766, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
       propertyPath: ComboStop.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
+    - target: {fileID: 6733808323271398766, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
+      propertyPath: MultiplyerIncrease.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6733808323271398766, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
+      propertyPath: MultiplyerIncrease.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6733808323271398766, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
+      propertyPath: MultiplyerIncrease.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1921065275}
+    - target: {fileID: 6733808323271398766, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
+      propertyPath: MultiplyerIncrease.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: ScoreManager, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 6733808323271398766, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
+      propertyPath: MultiplyerIncrease.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: MultiplierInrease
+      objectReference: {fileID: 0}
+    - target: {fileID: 6733808323271398766, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
+      propertyPath: MultiplyerIncrease.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 6733808323271398767, guid: a2f5f8de390186b44ac1b193b842fa58, type: 3}
